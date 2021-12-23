@@ -3,34 +3,11 @@
  *      Author: junyoung kim / lgkimjy
  */
 
-#include <ros/ros.h>
-#include <iostream>
-#include <iostream>
-
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/CompressedImage.h>
-#include <geometry_msgs/Vector3.h>
-#include <cv_bridge/cv_bridge.h>
-
-#include <opencv2/core.hpp>
-#include <opencv2/optflow.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/videoio.hpp>
-#include <opencv2/video.hpp>
-#include <sys/stat.h>
-
-using namespace cv;
-using namespace std;
-
-Mat frame, prvs;
-bool initialized = false;
-
-sensor_msgs::Image image_msg;
+#include "opticalflow_ros/opticalflow_ros.hpp"
 
 sensor_msgs::Image image2message(Mat image)
 {
-    //insert images to ros message
+    // insert images to ros message
     cv_bridge::CvImage cv_image;
     cv_image.image = image;
     cv_image.encoding = "bgr8";
@@ -41,14 +18,14 @@ sensor_msgs::Image image2message(Mat image)
 
 void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
     
-    ROS_INFO("[mission] callback functioning, OPENCV version : %s", CV_VERSION);
+    ROS_INFO("[opticalflow_ros] callback functioning, OPENCV version : %s", CV_VERSION);
 
     try{
         frame = cv_bridge::toCvShare(msg, "bgr8")->image;
         // cv::imshow("view", frame);
         // cv::waitKey(30);
     }catch (cv_bridge::Exception& e){
-        ROS_ERROR("Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
+        ROS_ERROR("[opticalflow_ros] Could not convert from '%s' to 'bgr8'.", msg->encoding.c_str());
     }
 
     if(!initialized){
@@ -69,7 +46,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
         Mat oang = angle * 3.141592 / 180.0;
         angle *= ((1.f / 360.f) * (180.f / 255.f));
 
-        //build hsv image
+        /* build hsv image */
         Mat _hsv[3], hsv, hsv8, bgr;
         _hsv[0] = angle;
         _hsv[1] = Mat::ones(angle.size(), CV_32F);
@@ -79,7 +56,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
         cvtColor(hsv8, bgr, COLOR_HSV2BGR);
         imshow("frame", bgr);
 
-        // representation using vectors
+        /* representation using vectors */
         int step = 10;
         Mat img_vec = frame;
         for (int r=0; r<angle.rows; r+=step) {
@@ -95,14 +72,14 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg){
         image_msg = image2message(img_vec);
 
         waitKey(30);
-    prvs = next;
+        prvs = next;
     }
 }
 
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "misson");
+    ros::init(argc, argv, "opticalflow_ros");
 	ros::NodeHandle n;
     ros::Rate loop_rate(100);
 
